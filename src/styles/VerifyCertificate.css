@@ -1,0 +1,119 @@
+
+.verify-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.verify-container h1 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #2c3e50;
+}
+
+.verify-form {
+  background-color: white;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  margin-bottom: 30px;
+}
+
+.verification-result {
+  background-color: white;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  margin-bottom: 30px;
+}
+
+.success-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.verified-badge {
+  background-color: #28a745;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-weight: bold;
+}
+
+.failed-badge {
+  background-color: #dc3545;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-weight: bold;
+}
+
+.success-header h3 {
+  color: #28a745;
+  margin: 0;
+}
+
+.certificate-details {
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+}
+
+.certificate-details h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #2c3e50;
+}
+
+.detail-row {
+  display: flex;
+  border-bottom: 1px solid #eee;
+  padding: 8px 0;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  flex: 0 0 150px;
+  font-weight: 600;
+  color: #7f8c8d;
+}
+
+.detail-value {
+  flex: 1;
+  color: #2c3e50;
+}
+
+.verification-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.action-btn {
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: #3498db;
+  color: white;
+}
+
+.action-btn.secondary {
+  background-color: #7f8c8d;
+}
+
+.error-result {
+  text-align: center;
+  padding: 20px;
+}
+
+.error-result p {
+  margin-top: 15px;
+}
