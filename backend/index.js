@@ -11,7 +11,7 @@ import { fileURLToPath } from 'url';
 // server.js or in a /api/ask route
 import bodyParser from 'body-parser';
 import axios from 'axios';
-
+import nodemailer from 'nodemailer';
 import TrustChainABI from './TrustChainABI.json' assert { type: 'json' };
 import serviceAccount from './gdrive-service.json' assert { type: 'json' };
 
@@ -75,6 +75,35 @@ const uploadToDrive = async (file) => {
   return `https://drive.google.com/uc?id=${response.data.id}&export=download`;
 };
 
+//gmail
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'vinaykamble289@gmail.com',              // Your Gmail address
+    pass: 'etvpuacywvirspsu'   // 16-char app password (no spaces)
+  }
+});
+
+
+const sendCertificateEmail = async (to, name, certUrl, certHash) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to,
+    subject: '🎓 Your Certificate is Live on Blockchain!',
+    html: `
+      <h2>Hello ${name},</h2>
+      <p>Congratulations! Your certificate has been successfully uploaded and recorded on the blockchain.</p>
+      <p><strong>Download Link:</strong> <a href="${certUrl}">Click here to view your certificate</a></p>
+      <p><strong>Certificate Hash:</strong> ${certHash}</p>
+      <p>Use this hash to verify the authenticity of your certificate at any time.</p>
+      <br>
+      <p>Best regards,<br>TrustChain Team</p>
+    `
+  };
+
+  await transporter.sendMail(mailOptions);
+};
 
 
 
@@ -124,7 +153,8 @@ app.post('/upload-certificate', upload.single('certificate'), async (req, res) =
       fileUrl,
       certHash
     });
-
+    // 📧 Send Email
+    await sendCertificateEmail(studentEmail, studentName, fileUrl, certHash);
     await fs.promises.unlink(req.file.path); // Cleanup temp file
 
     res.status(200).json({
