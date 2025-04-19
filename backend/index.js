@@ -15,6 +15,10 @@ import nodemailer from 'nodemailer';
 import TrustChainABI from './TrustChainABI.json' assert { type: 'json' };
 import serviceAccount from './gdrive-service.json' assert { type: 'json' };
 
+import { GoogleGenAI } from "@google/genai";
+
+const ai = new GoogleGenAI({ apiKey:"AIzaSyBUWSedwDXFSHAALILUD0B0Jzyhm_MI3YM"});
+
 // Firebase Setup
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
@@ -112,18 +116,18 @@ app.post('/api/ask', async (req, res) => {
   const { prompt } = req.body;
 
   try {
-    const response = await axios.post('http://localhost:11434/api/generate', {
-      model: 'llama3.2',
-      prompt: prompt,
-      stream: false,
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: prompt,
     });
+    const text = response.text;
 
-    res.json({ answer: response.data.response });
+    res.json({ answer: text });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch from LLaMA model.' });
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Failed to fetch from Gemini API.' });
   }
 });
-
 
 // 🟢 Upload Route
 app.post('/upload-certificate', upload.single('certificate'), async (req, res) => {
