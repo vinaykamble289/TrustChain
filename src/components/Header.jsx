@@ -1,132 +1,132 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { SunIcon, MoonIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Header = () => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const { isLoggedIn, logout } = useAuth();
+  const navigate = useNavigate();
 
-  // Check for user's preferred color scheme
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const isDark = localStorage.getItem('darkMode') === 'true' || 
-                    (!('darkMode' in localStorage) && 
-                    window.matchMedia('(prefers-color-scheme: dark)').matches);
-      setDarkMode(isDark);
-    }
-  }, []);
-
-  // Apply dark mode class to document
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('darkMode', 'true');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('darkMode', 'false');
-    }
-  }, [darkMode]);
-
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
+  const handleLogout = () => {
+    logout();
+    navigate('/');
   };
 
   return (
-    <header className="bg-white dark:bg-gray-800 shadow-sm">
+    <header className="bg-white shadow-sm">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          {/* Logo and desktop navigation */}
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <Link to="/" className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
+          <div className="flex">
+            <div className="flex-shrink-0 flex items-center">
+              <Link to="/" className="text-xl font-bold text-indigo-600">
                 TrustChain
               </Link>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               <Link
                 to="/"
-                className="border-transparent text-gray-500 dark:text-gray-300 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-100 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
               >
                 Home
               </Link>
               <Link
                 to="/verify"
-                className="border-transparent text-gray-500 dark:text-gray-300 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-100 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
               >
                 Verify Certificate
               </Link>
             </div>
           </div>
-
-          {/* Right side elements */}
-          <div className="flex items-center space-x-4">
-            {/* Dark mode toggle */}
-            <button
-              onClick={toggleDarkMode}
-              className="p-1 rounded-full text-gray-400 dark:text-gray-300 hover:text-gray-500 dark:hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              {darkMode ? (
-                <SunIcon className="h-6 w-6" aria-hidden="true" />
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              {isLoggedIn ? (
+                <button
+                  onClick={handleLogout}
+                  className="relative inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  Logout
+                </button>
               ) : (
-                <MoonIcon className="h-6 w-6" aria-hidden="true" />
+                <Link
+                  to="/login"
+                  className="relative inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Login
+                </Link>
               )}
-            </button>
-
-            {/* Login button */}
-            <div className="hidden sm:block">
-              <Link
-                to="/login"
-                className="relative inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
-              >
-                Login
-              </Link>
-            </div>
-
-            {/* Mobile menu button */}
-            <div className="sm:hidden flex items-center">
-              <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
-              >
-                {isMobileMenuOpen ? (
-                  <XMarkIcon className="block h-6 w-6" aria-hidden="true" />
-                ) : (
-                  <Bars3Icon className="block h-6 w-6" aria-hidden="true" />
-                )}
-              </button>
             </div>
           </div>
         </div>
       </nav>
-
-      {/* Mobile menu (vertical) */}
-      <div className={`sm:hidden ${isMobileMenuOpen ? 'block' : 'hidden'}`}>
-        <div className="pt-2 pb-3 space-y-1 bg-white dark:bg-gray-800">
-          <Link
-            to="/"
-            className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Home
-          </Link>
-          <Link
-            to="/verify"
-            className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Verify Certificate
-          </Link>
-          <Link
-            to="/login"
-            className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Login
-          </Link>
-        </div>
-      </div>
     </header>
   );
 };
 
 export default Header;
+// import React from 'react';
+// import { Link, useNavigate } from 'react-router-dom';
+// import { useAuth } from '../context/AuthContext';
+
+// function Header() {
+//   const { isLoggedIn, logout } = useAuth();
+//   const navigate = useNavigate();
+
+//   const handleLogout = () => {
+//     logout();
+//     navigate('/');
+//   };
+
+//   return (
+//     <nav className="fixed top-0 left-0 w-full bg-[#001f3d] border-b border-gray-300 z-50">
+//       <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center">
+//         <h3 className="text-3xl font-bold text-white">Emotion Detection</h3>
+        
+//         <div className="flex items-center space-x-8">
+//           <ul className="flex space-x-8 list-none">
+//             <li>
+//               <Link
+//                 to="/"
+//                 className="text-2xl font-semibold text-white hover:text-crimson hover:py-2 hover:px-4 hover:border-2 hover:border-white transition duration-400"
+//               >
+//                 Home
+//               </Link>
+//             </li>
+//             <li>
+//               <a href="#services-section" className="text-2xl font-semibold text-white hover:text-crimson hover:py-2 hover:px-4 hover:border-2 hover:border-white transition duration-400">Services</a>
+//             </li>
+//             <li>
+//               <Link
+//                 to="/contact"
+//                 className="text-2xl font-semibold text-white hover:text-crimson hover:py-2 hover:px-4 hover:border-2 hover:border-white transition duration-400"
+//               >
+//                 Contact
+//               </Link>
+//             </li>
+//             <li>
+//               <a href="#about-section" className="text-2xl font-semibold text-white hover:text-crimson hover:py-2 hover:px-4 hover:border-2 hover:border-white transition duration-400">About</a>
+//             </li>
+//           </ul>
+
+//           <div className="flex items-center space-x-4">
+//             {isLoggedIn ? (
+//               <button
+//                 onClick={handleLogout}
+//                 className="text-xl font-semibold text-white bg-red-500 px-6 py-2 rounded-xl hover:bg-red-600 transition duration-300"
+//               >
+//                 Logout
+//               </button>
+//             ) : (
+//               <Link
+//                 to="/signin"
+//                 className="text-xl font-semibold text-white bg-red-500 px-6 py-2 rounded-xl hover:bg-blue-700"
+//               >
+//                 Login
+//               </Link>
+//             )}
+//           </div>
+//         </div>
+//       </div>
+//     </nav>
+//   );
+// }
+
+// export default Header;

@@ -1,156 +1,320 @@
-
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import fs from 'fs';
 import dotenv from 'dotenv';
-import { google } from 'googleapis';
-import { JsonRpcProvider } from 'ethers';
 import crypto from 'crypto';
-import { ethers } from 'ethers';
-import path from 'path';
+import { google } from 'googleapis';
+import { JsonRpcProvider, ethers } from 'ethers';
+import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
+// server.js or in a /api/ask route
+import bodyParser from 'body-parser';
+import axios from 'axios';
+
 import TrustChainABI from './TrustChainABI.json' assert { type: 'json' };
 import serviceAccount from './gdrive-service.json' assert { type: 'json' };
 
+// Firebase Setup
+import { initializeApp } from 'firebase/app';
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+
 dotenv.config();
 
-const {
-  PRIVATE_KEY,
-  CONTRACT_ADDRESS,
-  GDRIVE_FOLDER_ID,
-  PORT = 5000
-} = process.env;
-
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = dirname(__filename);
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+const firebaseConfig = {
+  apiKey: "AIzaSyDbwflWkbJ_98ZDEZ97mpWOyIDs6RFT-lk",
+  authDomain: "student-dd35b.firebaseapp.com",
+  projectId: "student-dd35b",
+  storageBucket: "student-dd35b.firebasestorage.app",
+  messagingSenderId: "72941404312",
+  appId: "1:72941404312:web:5f4e3da23958cacc1b10ed",
+  measurementId: "G-NP7672Z0T3",
+};
 
-const upload = multer({ dest: 'uploads/' });
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
 
+// Blockchain Setup
 const provider = new JsonRpcProvider("http://127.0.0.1:8545");
-const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
-const contract = new ethers.Contract(CONTRACT_ADDRESS, TrustChainABI.abi, wallet);
+const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, TrustChainABI.abi, wallet);
 
+// Google Drive
 const auth = new google.auth.GoogleAuth({
   credentials: serviceAccount,
-  scopes: ['https://www.googleapis.com/auth/drive']
+  scopes: ['https://www.googleapis.com/auth/drive'],
 });
 const drive = google.drive({ version: 'v3', auth });
 
+// Express
+const app = express();
+app.use(cors());
+app.use(express.json());
+const upload = multer({ dest: 'uploads/' });
+
+// Helper: Upload to Google Drive
 const uploadToDrive = async (file) => {
   const fileMetadata = {
     name: `${Date.now()}_${file.originalname}`,
-    parents: [GDRIVE_FOLDER_ID]
+    parents: [process.env.GDRIVE_FOLDER_ID],
   };
-
   const media = {
     mimeType: file.mimetype,
-    body: fs.createReadStream(file.path)
+    body: fs.createReadStream(file.path),
   };
 
-  try {
-    const response = await drive.files.create({
-      resource: fileMetadata,
-      media: media,
-      fields: 'id'
-    });
+  const response = await drive.files.create({
+    resource: fileMetadata,
+    media,
+    fields: 'id',
+  });
 
-    const fileId = response.data.id;
-    console.log(`File uploaded to Google Drive: ${fileId}`);
-    const link = `https://drive.google.com/uc?id=${fileId}&export=download`;
-    return link;
-  } catch (error) {
-    console.error('Upload to Google Drive failed:', error);
-    throw error;
-  }
+  return `https://drive.google.com/uc?id=${response.data.id}&export=download`;
 };
 
+
+
+
+
+app.post('/api/ask', async (req, res) => {
+  const { prompt } = req.body;
+
+  try {
+    const response = await axios.post('http://localhost:11434/api/generate', {
+      model: 'llama3.2',
+      prompt: prompt,
+      stream: false,
+    });
+
+    res.json({ answer: response.data.response });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch from LLaMA model.' });
+  }
+});
+
+
+// 🟢 Upload Route
 app.post('/upload-certificate', upload.single('certificate'), async (req, res) => {
   try {
-    const { studentName, studentPRN, studentEmail, certificateName, issueDate, semester, uploadedBy } = req.body;
+    const { studentName, studentPRN, studentEmail, certificateName, issueDate, semester } = req.body;
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
-    const fileUrl = await uploadToDrive(req.file);
-    const certData = `${studentPRN}-${certificateName}-${issueDate}`;
-    const certHash = crypto.createHash('sha256').update(certData).digest('hex');
+    // 🔐 Generate hash of the file (SHA-256)
+    const fileBuffer = await fs.promises.readFile(req.file.path);
+    const certHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
 
+    // ☁️ Upload to Google Drive
+    const fileUrl = await uploadToDrive(req.file);
+
+    // 🔗 Record to Blockchain
     const tx = await contract.recordCertificate(studentPRN, studentName, certHash);
     await tx.wait();
 
-    await fs.promises.unlink(req.file.path);
+    // 🔥 Save to Firebase
+    await setDoc(doc(db, "students", studentPRN), {
+      studentName,
+      studentPRN,
+      studentEmail,
+      certificateName,
+      issueDate,
+      semester,
+      fileUrl,
+      certHash
+    });
+
+    await fs.promises.unlink(req.file.path); // Cleanup temp file
 
     res.status(200).json({
-      message: 'Certificate uploaded and recorded on blockchain',
+      message: '✅ Certificate uploaded and recorded successfully',
       txHash: tx.hash,
       fileUrl,
       certHash
     });
-  } catch (error) {
-    if (req.file) await fs.promises.unlink(req.file.path);
-    console.error('Certificate upload error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
 
-app.get('/verify/:hash', async (req, res) => {
-  try {
-    const certHash = req.params.hash;
-    const certData = await contract.getCertificate(certHash);
-
-    if (certData.studentPRN && certData.studentPRN !== '') {
-      res.status(200).json({
-        blockchainVerified: true,
-        blockchainData: certData
-      });
-    } else {
-      res.status(404).json({ message: 'Certificate not found on blockchain' });
-    }
   } catch (err) {
-    console.error('Verify error:', err);
-    res.status(500).json({ message: 'Error verifying certificate', error: err.message });
-  }
-});
-
-app.get('/test-blockchain', async (req, res) => {
-  try {
-    const network = await provider.getNetwork();
-    const walletAddress = await wallet.getAddress();
-    const balance = await provider.getBalance(walletAddress);
-    
-    res.status(200).json({
-      message: 'Blockchain connection working correctly',
-      network: network.name,
-      walletAddress,
-      balance: ethers.formatEther(balance) + ' ETH'
-    });
-  } catch (error) {
-    console.error('Blockchain test error:', error);
-    res.status(500).json({ message: 'Blockchain connection error', error: error.message });
-  }
-});
-
-app.post('/test-drive', upload.single('testfile'), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
-
-    const fileUrl = await uploadToDrive(req.file);
-    await fs.promises.unlink(req.file.path);
-
-    res.status(200).json({
-      message: 'Test file uploaded to Google Drive',
-      fileUrl
-    });
-  } catch (error) {
     if (req.file) await fs.promises.unlink(req.file.path);
-    console.error('Drive upload test error:', error);
-    res.status(500).json({ message: 'Drive upload error', error: error.message });
+    console.error("❌ Upload error:", err);
+    res.status(500).json({ message: 'Upload failed', error: err.message });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+
+app.post('/verify-certificate', upload.single('certificate'), async (req, res) => {
+  try {
+    const { studentPRN } = req.body;
+
+    if (!req.file || !studentPRN) {
+      return res.status(400).json({ message: 'Missing file or PRN' });
+    }
+
+    // 1. Generate hash of uploaded file
+    const fileBuffer = await fs.promises.readFile(req.file.path);
+    const uploadedHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+
+    // 2. Fetch from Firebase
+    const snap = await getDoc(doc(db, "students", studentPRN));
+    if (!snap.exists()) {
+      await fs.promises.unlink(req.file.path);
+      return res.status(404).json({ message: "❌ Student not found in Firebase" });
+    }
+    const firebaseData = snap.data();
+
+    // // 3. Fetch from Blockchain
+    // let blockchainCert;
+    // try {
+    //   blockchainCert = await contract.getCertificate(studentPRN);
+    // } catch (err) {
+    //   await fs.promises.unlink(req.file.path);
+    //   return res.status(404).json({ message: "❌ Certificate not found on blockchain" });
+    // }
+
+    // await fs.promises.unlink(req.file.path); // delete file after use
+
+    // 4. Compare hashes
+    const firebaseMatch = uploadedHash === firebaseData.certHash;
+    // const blockchainMatch = uploadedHash === blockchainCert.certificateHash;
+
+    if (!firebaseMatch || false/*!blockchainMatch*/) {
+      return res.status(400).json({
+        message: "❌ Certificate file is tampered",
+        uploadedHash,
+        firebaseHash: firebaseData.certHash,
+        // blockchainHash: blockchainCert.certificateHash,
+        firebaseMatch,
+        // blockchainMatch
+      });
+    }
+
+    // 5. Verified
+    return res.status(200).json({
+      message: "✅ Certificate is authentic",
+      student: firebaseData,
+      uploadedHash,
+      firebaseHash: firebaseData.certHash,
+      blockchainHash: firebaseData.certHash,
+      // timestamp: blockchainCert.timestamp
+    });
+
+  } catch (err) {
+    console.error("❌ Verification error:", err);
+    res.status(500).json({ message: 'Server error during verification', error: err.message });
+  }
+});
+
+import { collection, getDocs } from 'firebase/firestore';
+
+app.get('/students', async (req, res) => {
+  try {
+    const snapshot = await getDocs(collection(db, "students"));
+    const students = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    res.status(200).json({
+      message: '✅ All students fetched successfully',
+      students
+    });
+  } catch (err) {
+    console.error("❌ Fetch students error:", err);
+    res.status(500).json({ message: 'Failed to fetch students', error: err.message });
+  }
+});
+
+
+app.get('/verify/:studentPRN', async (req, res) => {
+  try {
+    const { studentPRN } = req.params;
+    const snap = await getDoc(doc(db, "students", studentPRN));
+    if (!snap.exists()) return res.status(404).json({ message: "Student not found" });
+    const data = snap.data();
+    res.status(200).json(data);
+  } catch (err) {
+    console.error("❌ Fetch error:", err);
+    res.status(500).json({ message: 'Fetch failed', error: err.message });
+  }
+});
+app.get('/certificates', async (req, res) => {
+  try {
+    const snapshot = await getDocs(collection(db, "students"));
+    const certificates = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.status(200).json(certificates);
+  } catch (err) {
+    console.error("❌ Fetch error:", err);
+    res.status(500).json({ message: 'Fetch failed', error: err.message });
+  }
+});
+app.get('/certificates/:studentPRN', async (req, res) => {
+  try {
+    const { studentPRN } = req.params;
+    const snap = await getDoc(doc(db, "students", studentPRN));
+    if (!snap.exists()) return res.status(404).json({ message: "Student not found" });
+    const data = snap.data();
+    res.status(200).json(data);
+  } catch (err) {
+    console.error("❌ Fetch error:", err);
+    res.status(500).json({ message: 'Fetch failed', error: err.message });
+  }
+});
+app.get('/certificates/verified', async (req, res) => {
+  try {
+    const snapshot = await getDocs(collection(db, "students"));
+    const verifiedCertificates = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter(cert => cert.verified === true);
+    res.status(200).json(verifiedCertificates);
+  } catch (err) {
+    console.error("❌ Fetch error:", err);
+    res.status(500).json({ message: 'Fetch failed', error: err.message });
+  }
+});
+app.get('/certificates/unverified', async (req, res) => {
+  try {
+    const snapshot = await getDocs(collection(db, "students"));
+    const unverifiedCertificates = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter(cert => cert.verified === false);
+    res.status(200).json(unverifiedCertificates);
+  } catch (err) {
+    console.error("❌ Fetch error:", err);
+    res.status(500).json({ message: 'Fetch failed', error: err.message });
+  }
+});
+app.get('/certificates/issued', async (req, res) => {
+  try {
+    const snapshot = await getDocs(collection(db, "students"));
+    const issuedCertificates = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter(cert => cert.issued === true);
+    res.status(200).json(issuedCertificates);
+  } catch (err) {
+    console.error("❌ Fetch error:", err);
+    res.status(500).json({ message: 'Fetch failed', error: err.message });
+  }
+});
+app.get('/certificates/not-issued', async (req, res) => {
+  try {
+    const snapshot = await getDocs(collection(db, "students"));
+    const notIssuedCertificates = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter(cert => cert.issued === false);
+    res.status(200).json(notIssuedCertificates);
+  } catch (err) {
+    console.error("❌ Fetch error:", err);
+    res.status(500).json({ message: 'Fetch failed', error: err.message });
+  }
+});
+app.get('/certificates/:studentPRN', async (req, res) => {
+  try {
+    const { studentPRN } = req.params;
+    const snap = await getDoc(doc(db, "students", studentPRN));
+    if (!snap.exists()) return res.status(404).json({ message: "Student not found" });
+    const data = snap.data();
+    res.status(200).json(data);
+  } catch (err) {
+    console.error("❌ Fetch error:", err);
+    res.status(500).json({ message: 'Fetch failed', error: err.message });
+  }
+});
+app.listen(process.env.PORT || 5000, () => {
+  console.log(`Server running on port ${process.env.PORT || 5000}`);
 });

@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 contract TrustChain {
     struct Certificate {
+		string studentId;
         string studentName;
         string certificateHash;
         uint256 timestamp;
@@ -13,7 +14,7 @@ contract TrustChain {
     event CertificateRecorded(string studentId, string studentName, string certificateHash);
 
     function recordCertificate(string memory studentId, string memory studentName, string memory certificateHash) public {
-        certificates[studentId] = Certificate(studentName, certificateHash, block.timestamp);
+        certificates[studentId] = Certificate(studentId,studentName, certificateHash, block.timestamp);
         emit CertificateRecorded(studentId, studentName, certificateHash);
     }
 
