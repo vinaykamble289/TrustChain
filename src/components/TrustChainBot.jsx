@@ -11,21 +11,30 @@ const TrustChainBot = () => {
     setAnswer('');
 
     try {
-      const response = await fetch('http://localhost:11434/api/generate', {
+      const response = await fetch('https://api.together.xyz/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer 1463ee17105935545f215810d3b00438f12381ffd3faecfbcece63c2b5f8f4e3', // Replace with your actual key
+        },
         body: JSON.stringify({
-          model: 'llama3.2',
-          prompt: query,
-          stream: false,
+          model: 'meta-llama/Llama-3-70b-chat-hf',
+          messages: [{ role: 'user', content: query }],
+          temperature: 0.7,
         }),
       });
 
+
       const data = await response.json();
-      setAnswer(data.response || 'No response from LLaMA.');
+      console.log('API response:', data);
+      
+      // Update this according to your API’s structure
+      const botReply = data.choices?.[0]?.message?.content || 'No valid reply.';
+setAnswer(botReply);
+
     } catch (err) {
-      console.error('Error connecting to LLaMA 3 via Ollama:', err);
-      setAnswer('Error connecting to local LLaMA model.');
+      console.error('Error connecting to LLaMA 4 API:', err);
+      setAnswer('Error connecting to online LLaMA 4 model.');
     }
 
     setLoading(false);
