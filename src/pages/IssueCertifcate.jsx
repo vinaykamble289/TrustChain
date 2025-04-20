@@ -81,7 +81,7 @@ function IssueCertificate({ account, isConnected }) {
   // }
 
   return (
-    <div className="issue-container">
+    <div className="issue-container mt-20">
       <h1>Issue Digital Certificate</h1>
       <p className="wallet-info">College Wallet: {account}</p>
       

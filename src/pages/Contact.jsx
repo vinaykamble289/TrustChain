@@ -90,7 +90,7 @@ function Contact() {
               {[
                 { icon: <FaMapMarkerAlt className="h-6 w-6 text-blue-600" />, title: "Address", text: "Kolhapur, Maharashtra, India" },
                 { icon: <FaPhone className="h-6 w-6 text-blue-600" />, title: "Phone", text: "+123 456 7890" },
-                { icon: <FaEnvelope className="h-6 w-6 text-blue-600" />, title: "Email", text: "khade8404@gmail.com" }
+                { icon: <FaEnvelope className="h-6 w-6 text-blue-600" />, title: "Email", text: "trustchain@gmail.com" }
               ].map((info, idx) => (
                 <div className="flex items-start" key={idx}>
                   <div className="flex-shrink-0 bg-blue-100 p-3 rounded-full">
@@ -104,9 +104,9 @@ function Contact() {
               ))}
 
               <div className="pt-2">
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">Emotion Detection Features</h3>
+                <h3 className="text-xl font-semibold text-gray-900 mb-3">TrustChain  Features</h3>
                 <ul className="space-y-2 pl-3">
-                  {["Real-time Face Detection", "Image Analysis", "Video Emotion Tracking"].map((item, idx) => (
+                  {["Institution", "Students", "Verifiers"].map((item, idx) => (
                     <li key={idx} className="flex items-center text-gray-700">
                       <span className="text-blue-600 mr-2">•</span>{item}
                     </li>

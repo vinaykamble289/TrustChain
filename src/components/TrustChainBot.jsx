@@ -1,4 +1,3 @@
-// components/TrustChainBot.jsx
 import { useState } from 'react';
 
 const TrustChainBot = () => {
@@ -9,18 +8,26 @@ const TrustChainBot = () => {
   const handleAsk = async () => {
     if (!query.trim()) return;
     setLoading(true);
+    setAnswer('');
+
     try {
-      const response = await fetch('http://localhost:5000/api/ask', {
+      const response = await fetch('http://localhost:11434/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: query }),
+        body: JSON.stringify({
+          model: 'llama3.2',
+          prompt: query,
+          stream: false,
+        }),
       });
 
       const data = await response.json();
-      setAnswer(data.answer);
-    } catch (error) {
-      setAnswer('Error fetching answer from bot.');
+      setAnswer(data.response || 'No response from LLaMA.');
+    } catch (err) {
+      console.error('Error connecting to LLaMA 3 via Ollama:', err);
+      setAnswer('Error connecting to local LLaMA model.');
     }
+
     setLoading(false);
   };
 
@@ -42,7 +49,7 @@ const TrustChainBot = () => {
         {loading ? 'Thinking...' : 'Ask'}
       </button>
       {answer && (
-        <div className="mt-4 p-3 bg-white border rounded">
+        <div className="mt-4 p-3 bg-white border rounded whitespace-pre-wrap">
           <strong>Bot:</strong> {answer}
         </div>
       )}

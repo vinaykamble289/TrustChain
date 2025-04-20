@@ -5,35 +5,38 @@ import { useNavigate, Link } from "react-router-dom";
 import { CheckCircle, XCircle, Search } from "lucide-react";
 
 const VerifierDashboard = () => {
-  const [hash, setHash] = useState("");
-  const [certificateData, setCertificateData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const [studentPRN, setStudentPRN] = useState('');
+  const [certificateFile, setCertificateFile] = useState(null);
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false); // Ensure loading is defined
 
-  const handleVerify = async () => {
-    if (!hash) {
-      toast.error("Please enter a certificate hash.");
-      return;
-    }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setResult(null);
+
+    const formData = new FormData();
+    formData.append("studentPRN", studentPRN);
+    formData.append("certificate", certificateFile);
 
     try {
-      setLoading(true);
-      const response = await axios.get(`http://localhost:5000/verify/${hash}`);
-      if (response.data && response.data.length > 0) {
-        setCertificateData(response.data);
-        toast.success("Certificate found on blockchain.");
-        setTimeout(() => navigate("/verified"), 1000);
+      const res = await fetch('http://localhost:5000/verify-certificate', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setResult({ success: true, data });
       } else {
-        toast.error("Certificate not found.");
-        setTimeout(() => navigate("/unverified"), 1000);
+        setResult({ success: false, message: data.message });
       }
-    } catch (error) {
-      toast.error("Certificate not found.");
-      setTimeout(() => navigate("/unverified"), 1000);
+    } catch (err) {
+      setResult({ success: false, message: 'Network error. Please try again.' });
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] text-white p-6 pt-24">
@@ -46,53 +49,116 @@ const VerifierDashboard = () => {
           Manage, verify, and validate academic certificates securely.
         </p>
 
-        {/* Verification Form */}
-        <div className="bg-[#1c1b2f] p-8 rounded-xl shadow-lg mb-10 transition-transform duration-300 transform hover:scale-105 hover:shadow-blue-700/40">
-          <h2 className="text-2xl font-semibold text-white mb-6 text-center">
-            Verify Certificate Hash
+        <div className="min-h-screen bg-[#0f051d] py-16 px-6 mt-15">
+      <main className="max-w-3xl mx-auto">
+        <div className="bg-[#1c0a35]/90 shadow-xl rounded-2xl border border-indigo-500/20 p-8 text-white">
+          <h2 className="text-3xl font-bold text-indigo-400 mb-8 text-center">
+            🔍 Verify Certificate
           </h2>
-          <div className="flex flex-col md:flex-row items-center justify-center gap-4">
-            <input
-              type="text"
-              placeholder="Enter Certificate Hash"
-              className="w-full md:w-2/3 p-3 rounded-md bg-gray-800 text-white placeholder-gray-400 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={hash}
-              onChange={(e) => setHash(e.target.value)}
-            />
-            <button
-              onClick={handleVerify}
-              disabled={loading}
-              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 transition text-white px-6 py-3 rounded-md"
-            >
-              <Search className="w-5 h-5" />
-              {loading ? "Verifying..." : "Verify"}
-            </button>
-          </div>
 
-          {/* Certificate Data (Optional Display) */}
-          {certificateData && (
-            <div className="mt-6 bg-blue-900/20 p-4 rounded-md border border-blue-400">
-              <p><strong>Wallet:</strong> {certificateData[0]}</p>
-              <p><strong>Hash:</strong> {hash}</p>
-              <p>
-                <strong>URL:</strong>{" "}
-                <a
-                  href={certificateData[2]}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-300 underline"
-                >
-                  View Certificate
-                </a>
-              </p>
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Student PRN */}
+            <div>
+              <label className="block text-sm font-medium text-indigo-300 mb-1">Student PRN</label>
+              <input
+                type="text"
+                value={studentPRN}
+                onChange={(e) => setStudentPRN(e.target.value)}
+                required
+                className="w-full px-4 py-2 rounded-md bg-[#0f051d] border border-indigo-500/40 text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                placeholder="Enter PRN"
+              />
+            </div>
+
+            {/* Certificate File Upload */}
+            <div>
+              <label className="block text-sm font-medium text-indigo-300 mb-1">
+                Upload Certificate File (PDF)
+              </label>
+              <input
+                type="file"
+                accept=".pdf"
+                required
+                onChange={(e) => setCertificateFile(e.target.files[0])}
+                className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-md 
+                           file:border-0 file:font-semibold file:bg-indigo-600 hover:file:bg-indigo-700 
+                           file:text-white bg-[#0f051d] border border-indigo-500/30 rounded-md"
+              />
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={loading}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-6 rounded-md 
+                           transition-shadow shadow-md hover:shadow-lg disabled:opacity-50"
+              >
+                {loading ? 'Verifying...' : 'Verify Certificate'}
+              </button>
+            </div>
+          </form>
+
+          {/* Result */}
+          {result && (
+            <div className="mt-10 border-t border-indigo-500/20 pt-6">
+              <div className={`p-4 rounded-lg ${result.success ? 'bg-green-800/20' : 'bg-red-800/20'}`}>
+                <div className="flex items-start gap-3">
+                  <div className="pt-1">
+                    {result.success ? (
+                      <svg className="h-6 w-6 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    ) : (
+                      <svg className="h-6 w-6 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-300 space-y-1">
+                    {result.success ? (
+                      <>
+                        <p className="text-green-300 font-medium">✅ Certificate Verified</p>
+                        <p>Name: <span className="text-white">{result.data.student.studentName}</span></p>
+                        <p>Certificate: <span className="text-white">{result.data.student.certificateName}</span></p>
+                        <p>Issued: <span className="text-white">{result.data.student.issueDate}</span></p>
+                        <p>Semester: <span className="text-white">{result.data.student.semester}</span></p>
+                        <p>
+                          File:{" "}
+                          <a
+                            href={result.data.student.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-indigo-400 underline hover:text-indigo-300"
+                          >
+                            Download
+                          </a>
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-red-300 font-medium">❌ {result.message}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
+      </main>
+    </div>
 
         {/* Cards Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-8 mt-10">
           {/* Verified */}
-          <div className="bg-[#1c1b2f] p-6 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-blue-500 border border-blue-600">
+          <div className="bg-[#1c1b2f] p-7 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-blue-500 border border-blue-600">
             <div className="flex items-center space-x-4">
               <div className="bg-blue-700 p-3 rounded-lg">
                 <CheckCircle className="text-white w-8 h-8" />
@@ -104,29 +170,9 @@ const VerifierDashboard = () => {
                 </p>
               </div>
             </div>
-            <Link to="/verified" className="block">
+            <Link to="/issuedCertificate" className="block">
               <button className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md transition-colors">
                 View Verified
-              </button>
-            </Link>
-          </div>
-
-          {/* Unverified */}
-          <div className="bg-[#1c1b2f] p-6 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-red-500 border border-red-600">
-            <div className="flex items-center space-x-4">
-              <div className="bg-red-600 p-3 rounded-lg">
-                <XCircle className="text-white w-8 h-8" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-white">Unverified Certificates</h3>
-                <p className="text-red-300 text-sm mt-1">
-                  Certificates not found or suspected to be tampered.
-                </p>
-              </div>
-            </div>
-            <Link to="/unverified" className="block">
-              <button className="mt-4 w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-md transition-colors">
-                View Unverified
               </button>
             </Link>
           </div>

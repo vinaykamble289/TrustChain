@@ -15,9 +15,7 @@ import nodemailer from 'nodemailer';
 import TrustChainABI from './TrustChainABI.json' assert { type: 'json' };
 import serviceAccount from './gdrive-service.json' assert { type: 'json' };
 
-import { GoogleGenAI } from "@google/genai";
-
-const ai = new GoogleGenAI({ apiKey:"AIzaSyBUWSedwDXFSHAALILUD0B0Jzyhm_MI3YM"});
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Firebase Setup
 import { initializeApp } from 'firebase/app';
@@ -110,24 +108,29 @@ const sendCertificateEmail = async (to, name, certUrl, certHash) => {
 };
 
 
+//const ai = new GoogleGenAI({ apiKey:"AIzaSyBUWSedwDXFSHAALILUD0B0Jzyhm_MI3YM"});
 
+// Initialize Gemini API
+// Initialize Gemini
+const genAI = new GoogleGenerativeAI("AIzaSyBUWSedwDXFSHAALILUD0B0Jzyhm_MI3YM");
+const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
 
 app.post('/api/ask', async (req, res) => {
   const { prompt } = req.body;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: prompt,
-    });
-    const text = response.text;
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
 
     res.json({ answer: text });
   } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: 'Failed to fetch from Gemini API.' });
+    console.error('Gemini error:', error);
+    res.status(500).json({ error: 'Failed to get response from Gemini API.' });
   }
 });
+
+
 
 // 🟢 Upload Route
 app.post('/upload-certificate', upload.single('certificate'), async (req, res) => {

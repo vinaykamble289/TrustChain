@@ -13,13 +13,19 @@ import Footer from './pages/Footer';
 import AdminPage from './pages/AdminPage';
 import StudentDashboard from './pages/StudentDashboard';
 import Contact from './pages/Contact';
-import InstituteDashboard from './pages/instituteDashboard';
+import InstituteDashboard from './pages/InstituteDashboard';
 import IssuedCertificate from './pages/IssuedCertificate';
 import Forum from './pages/Forum'
 import VerifierDashboard from './pages/VerifierDashboard';
 import { Verified as VerifiedIcon } from 'lucide-react';
 import Unverified from './pages/Unverified';
 import Verified from './pages/Verified';
+import ForgotPassword from './pages/ForgotPassword';
+import TrustChainBot from './components/TrustChainBot';
+import ChatbotIcon from './components/ChatbotIcon';
+// import StudentCertificate from './pages/StudentCertificate';
+import ShareCertificate from './pages/ShareCertificate';
+import CertificateFetcher from './pages/CertificateFecher';
 
 const App = () => {
   return (
@@ -44,8 +50,15 @@ const App = () => {
        <Route path='/verifier' element={< VerifierDashboard/>}/>
        <Route path='/verified' element={< Verified/>}/>
        <Route path='/unverified' element={< Unverified/>}/>
+        <Route path='/chatbot' element={< TrustChainBot/>}/>
+       <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path='/share-certificate' element={< ShareCertificate/>}/>
+
+       <Route path='/my-certificates' element={< CertificateFetcher/>}/>
+       {/* <Route path='/share-certificate' element={< ShareCertificate/>}/> */}
           </Routes>
         </main>
+        <ChatbotIcon />
         <Footer/>
       </div>
     </Router>

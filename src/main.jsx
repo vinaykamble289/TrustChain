@@ -7,6 +7,6 @@ import TrustChainBot from './components/TrustChainBot.jsx'
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
-    <TrustChainBot /> 
+    {/* <TrustChainBot />  */}
   </StrictMode>,
 )
