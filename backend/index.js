@@ -57,7 +57,6 @@ import bodyParser from 'body-parser';
 import axios from 'axios';
 import nodemailer from 'nodemailer';
 import TrustChainABI from './TrustChainABI.json' assert { type: 'json' };
-import serviceAccount from './gdrive-service.json' assert { type: 'json' };
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
@@ -86,6 +85,20 @@ const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, TrustChainABI.abi, wallet);
 
 // Google Drive
+serviceAccount={
+  type: "service_account",
+  project_id: "operating-surge-457210-i3",
+  private_key_id: process.env.GDPRIVATEKEY,
+  private_key: process.env.GDRIVEPRIVATEKEY,
+  client_email: "trustchain@operating-surge-457210-i3.iam.gserviceaccount.com",
+  client_id: "109269080740638957060",
+  auth_uri: "https://accounts.google.com/o/oauth2/auth",
+  token_uri: "https://oauth2.googleapis.com/token",
+  auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+  client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/trustchain%40operating-surge-457210-i3.iam.gserviceaccount.com",
+  universe_domain: "googleapis.com"
+}
+
 const auth = new google.auth.GoogleAuth({
   credentials: serviceAccount,
   scopes: ['https://www.googleapis.com/auth/drive'],
