@@ -221,8 +221,9 @@
 //   );
 // };
 
-
 // export default UploadCertificate;
+
+
 
 // UploadCertificate.jsx
 import React, { useState } from 'react';
@@ -230,125 +231,74 @@ import { useNavigate } from 'react-router-dom';
 
 const UploadCertificate = () => {
   const navigate = useNavigate();
-
-  const [formData, setFormData] = useState({
-    studentName: '',
-    studentPRN: '',
-    studentEmail: '',
-    certificateName: '',
-    issueDate: '',
-    semester: '1',
-    file: null,
-  });
-
-  const [loading, setLoading] = useState(false);
+  const [file, setFile] = useState(null);
   const [message, setMessage] = useState('');
+  const [uploading, setUploading] = useState(false);
 
-  const semesters = Array.from({ length: 8 }, (_, i) => `Semester ${i + 1}`);
-
-  const handleChange = (e) => {
-    const { name, value, files } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: files ? files[0] : value
-    }));
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0]);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    if (!file) {
+      setMessage('❌ Please upload a PDF file');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('certificate', file);
+
+    setUploading(true);
     setMessage('');
 
-    const form = new FormData();
-    Object.entries(formData).forEach(([key, val]) =>
-      form.append(key, val)
-    );
-    form.append("uploadedBy", "admin@example.com"); // Or get current user if using auth
-
     try {
-      const res = await fetch('http://localhost:5000/upload-certificate', {
+      const res = await fetch('http://localhost:5000/upload-results', {
         method: 'POST',
-        body: form,
+        body: formData
       });
 
       const result = await res.json();
       if (res.ok) {
-        setMessage('✅ Certificate successfully uploaded and stored.');
-        console.log("Blockchain Tx:", result.txHash);
-        navigate('/institute'); // or another route
+        setMessage(`✅ Certificate uploaded successfully for PRN ${result.studentPRN}`);
+        navigate('/institute');
       } else {
         setMessage('❌ Upload failed: ' + result.message);
       }
     } catch (error) {
       setMessage('❌ Error: ' + error.message);
     } finally {
-      setLoading(false);
+      setUploading(false);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto bg-blue p-6 mt-10 rounded shadow">
-      <h2 className="text-2xl font-bold mb-4">Upload Certificate</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {[
-          { label: 'Student Name', name: 'studentName', type: 'text' },
-          { label: 'PRN', name: 'studentPRN', type: 'text' },
-          { label: 'Email', name: 'studentEmail', type: 'email' },
-          { label: 'Certificate Name', name: 'certificateName', type: 'text' },
-          { label: 'Issue Date', name: 'issueDate', type: 'date' }
-        ].map(({ label, name, type }) => (
-          <div key={name}>
-            <label className="block font-medium">{label}</label>
+    <div className="min-h-screen bg-[#0f051d] text-white py-12 px-6">
+      <div className="max-w-xl mx-auto bg-[#1c0a35]/80 p-8 rounded-xl border border-indigo-500/20">
+        <h2 className="text-3xl font-bold text-center mb-6 text-indigo-400">Upload Result PDF</h2>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block mb-1 text-sm text-gray-300">Upload File (PRN_Semester.pdf)</label>
             <input
-              type={type}
-              name={name}
-              value={formData[name]}
-              onChange={handleChange}
+              type="file"
+              accept=".pdf"
+              onChange={handleFileChange}
               required
-              className="w-full border px-3 py-2 rounded"
+              className="w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:font-medium file:bg-indigo-600 file:text-white hover:file:bg-indigo-700"
             />
           </div>
-        ))}
 
-        <div>
-          <label className="block font-medium">Semester</label>
-          <select
-            name="semester"
-            value={formData.semester}
-            onChange={handleChange}
-            className="w-full border px-3 py-2 rounded"
+          <button
+            type="submit"
+            disabled={uploading}
+            className="w-full bg-indigo-500 hover:bg-indigo-600 py-2 px-4 rounded-md font-medium transition"
           >
-            {semesters.map((s, idx) => (
-              <option key={idx} value={s}>{s}</option>
-            ))}
-          </select>
-        </div>
+            {uploading ? 'Uploading...' : 'Upload Result'}
+          </button>
 
-        <div>
-          <label className="block font-medium">Upload Certificate</label>
-          <input
-  type="file"
-  name="certificate"  // must match multer field name
-  onChange={handleChange}
-  required
-/>
-
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          {loading ? 'Uploading...' : 'Upload'}
-        </button>
-
-        {message && (
-          <div className="mt-4 text-sm text-center font-medium text-gray-800">
-            {message}
-          </div>
-        )}
-      </form>
+          {message && <p className="text-center mt-2 font-medium text-sm">{message}</p>}
+        </form>
+      </div>
     </div>
   );
 };

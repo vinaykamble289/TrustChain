@@ -1,101 +1,113 @@
-
 import React, { useState } from 'react';
-import { db } from '../firebase/firebase.js';
-import { doc, getDoc } from "firebase/firestore";
+import { Download, ClipboardCopy } from 'lucide-react';
 
-function CertificateFetcher() {
+const CertificateFetcher =  () => {
   const [prn, setPrn] = useState('');
-  const [fileUrl, setFileUrl] = useState(null);
+  const [certificates, setCertificates] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState('');
+  const [copiedIndex, setCopiedIndex] = useState(null);
 
-  const fetchCertificate = async () => {
-    const trimmedPrn = prn.trim();
-  
-    if (!trimmedPrn) {
-      setError('Please enter a PRN');
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!prn.trim()) {
+      setError('Please enter a PRN.');
       return;
     }
-  
+
     setLoading(true);
-    setError(null);
-    setFileUrl(null);
-  
+    setError('');
+    setCertificates([]);
+
     try {
-      console.log("Fetching certificate for PRN:", trimmedPrn);
-      const studentPRN = trimmedPrn.replace(/\s+/g, '');
-      console.log("Trimmed PRN:", studentPRN);
-  
-      // 🔥 Define docRef correctly here
-     
-         const docSnap = await getDoc(doc(db, "students", studentPRN));
-  
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        console.log("Document data:", data);
-  
-        if (data.fileUrl) {
-          setFileUrl(data.fileUrl);
-        } else {
-          setError('No certificate URL found for this PRN.');
-        }
-      } else {
-        setError('No student found with this PRN.');
+      const response = await fetch(`http://localhost:5000/students/${prn}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch certificates.');
       }
+      const data = await response.json();
+      setCertificates(data.certificates);
     } catch (err) {
-      console.error("Error fetching document:", err);
-      setError('Error fetching certificate: ' + err.message);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
-  
+
+  const copyToClipboard = async (text, index) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy: ", err);
+    }
+  };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-6">
-      <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-8 transition-transform hover:scale-105 duration-300">
-        <h2 className="text-2xl font-semibold text-center text-blue-700 mb-6">Fetch Certificate</h2>
+    <div className="min-h-screen bg-[#0f051d] text-white py-12 px-6 mt-16">
+      <div className="max-w-4xl mx-auto">
+        <h2 className="text-3xl font-bold text-indigo-400 mb-6 text-center">🔎 Search Student Certificates</h2>
 
-        <div className="mb-4">
+        <form onSubmit={handleSearch} className="mb-6 flex justify-center">
           <input
             type="text"
             value={prn}
             onChange={(e) => setPrn(e.target.value)}
             placeholder="Enter PRN"
-            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 text-white rounded-lg border border-indigo-400"
           />
-        </div>
+          <button
+            type="submit"
+            className="ml-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500"
+          >
+            Search
+          </button>
+        </form>
 
-        <button
-          onClick={fetchCertificate}
-          disabled={loading}
-          className={`w-full py-3 mt-2 text-white font-semibold rounded-md ${
-            loading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
-          } transition duration-200`}
-        >
-          {loading ? 'Fetching...' : 'Fetch Certificate'}
-        </button>
+        {loading && <p className="text-center text-indigo-300">Loading...</p>}
+        {error && <p className="text-center text-red-400">{error}</p>}
 
-        {error && (
-          <p className="mt-4 text-center text-red-500 font-medium">{error}</p>
-        )}
-
-        {fileUrl && (
-          <div className="mt-6 text-center">
-            <p className="text-green-600 font-medium">✅ Certificate found!</p>
-            <a
-              href={fileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 block text-blue-600 hover:underline font-semibold"
-            >
-              🔗 Download Certificate
-            </a>
+        {certificates.length > 0 && (
+          <div className="grid gap-6">
+            {certificates.map((cert, index) => (
+              <div key={index} className="p-4 border border-indigo-500/30 bg-[#1c0a35]/80 rounded-xl">
+                <p><span className="text-indigo-300">Name:</span> {cert.studentName}</p>
+                <p><span className="text-indigo-300">PRN:</span> {cert.studentPRN}</p>
+                <p><span className="text-indigo-300">Semester:</span> {cert.semester}</p>
+                <p><span className="text-indigo-300">Email:</span> {cert.studentEmail}</p>
+                <div className="flex items-center justify-between mt-2">
+                  <p className="text-indigo-300 text-sm">Hash: {cert.certHash}</p>
+                  <button
+                    onClick={() => copyToClipboard(cert.certHash, index)}
+                    className="text-indigo-400 hover:text-white"
+                  >
+                    {copiedIndex === index ? '✅' : <ClipboardCopy className="w-5 h-5" />}
+                  </button>
+                </div>
+                <div className="mt-2 flex justify-between items-center">
+                  <a
+                    href={cert.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline text-indigo-300"
+                  >
+                    View
+                  </a>
+                  <a
+                    href={cert.fileUrl}
+                    download
+                    className="text-indigo-400"
+                  >
+                    <Download className="w-5 h-5" />
+                  </a>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
     </div>
   );
-}
+};
 
 export default CertificateFetcher;

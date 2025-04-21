@@ -26,6 +26,8 @@ import ChatbotIcon from './components/ChatbotIcon';
 // import StudentCertificate from './pages/StudentCertificate';
 import ShareCertificate from './pages/ShareCertificate';
 import CertificateFetcher from './pages/CertificateFecher';
+import AddStudents from './pages/AddStudents';
+
 
 const App = () => {
   return (
@@ -39,7 +41,7 @@ const App = () => {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/instituteUpload" element={<UploadCertificate />} />
+            {/* <Route path="/instituteUpload" element={<UploadCertificate />} /> */}
             <Route path="/verify" element={<VerifyCertificate />} />
             <Route path='/admin' element={< AdminPage/>}/>
        <Route path='/student' element={< StudentDashboard/>}/>
@@ -53,7 +55,8 @@ const App = () => {
         <Route path='/chatbot' element={< TrustChainBot/>}/>
        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path='/share-certificate' element={< ShareCertificate/>}/>
-
+        <Route path="/upload-certificate" element={<UploadCertificate />} />
+        <Route path="/add-students" element={<AddStudents />} />
        <Route path='/my-certificates' element={< CertificateFetcher/>}/>
        {/* <Route path='/share-certificate' element={< ShareCertificate/>}/> */}
           </Routes>
